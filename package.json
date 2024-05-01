@@ -1,0 +1,17 @@
+{
+  "name": "k6",
+  "version": "1.0.0",
+  "description": "Grafana K6 performance tests",
+  "main": "reachableHoloport.js",
+  "scripts": {
+    "test": "k6 run ./dist/reachableHoloport.js",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@types/k6": "^0.50.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "typescript": "^5.4.5"
+  }
+}
