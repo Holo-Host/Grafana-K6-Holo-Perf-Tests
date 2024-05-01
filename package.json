@@ -4,7 +4,8 @@
   "description": "Grafana K6 performance tests",
   "main": "reachableHoloport.js",
   "scripts": {
-    "test": "k6 run ./dist/reachableHoloport.js",
+    "test-qa": "npm run build && cross-env NETWORK=qa && k6 run ./dist/reachableHoloport.js",
+    "test-dev": "npm run build && cross-env NETWORK=dev && k6 run ./dist/reachableHoloport.js",
     "build": "tsc"
   },
   "dependencies": {
@@ -12,6 +13,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.12.7",
+    "cross-env": "^7.0.3",
     "typescript": "^5.4.5"
   }
 }
