@@ -1,11 +1,11 @@
-export const Network = {
+const Network = {
     local: 'local',
     development: 'dev',
     qa: 'qa',
     production: 'prod'
 }
 
-export const resolverURL = () => {
+const resolverURL = () => {
     switch (__ENV.NETWORK) {
       case Network.local:
         return `http://localhost:3000/`
@@ -20,11 +20,11 @@ export const resolverURL = () => {
         return `resolver.holo.host`
   
       default:
-        throw new Error('Error resolving resolver url. Found invalid environment key.')
+        throw new Error(`Error resolving resolver url. Found invalid environment key. __ENV.NETWORK: ${__ENV.NETWORK}`, __ENV)
     }
 }
 
-export const domain = () => {
+const domain = () => {
     switch (__ENV.NETWORK) {
       case Network.local:
         return `cloud-console`
@@ -42,3 +42,8 @@ export const domain = () => {
         throw new Error('Error resolving hApp domain. Found invalid environment key.')
     }
 }
+
+module.exports = {
+  resolverURL: resolverURL,
+  domain: domain
+};
