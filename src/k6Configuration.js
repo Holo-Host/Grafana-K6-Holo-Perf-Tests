@@ -20,7 +20,7 @@ const resolverURL = () => {
         return `resolver.holo.host`
   
       default:
-        throw new Error(`Error resolving resolver url. Found invalid environment key. __ENV.NETWORK: ${__ENV.NETWORK}`, __ENV)
+        throw new Error(`Error resolving resolver url. Found invalid environment key. __ENV.NETWORK: ${__ENV.NETWORK}`)
     }
 }
 
@@ -39,7 +39,7 @@ const domain = () => {
         return `cloud-console.holo.host`
   
       default:
-        throw new Error('Error resolving hApp domain. Found invalid environment key.')
+        throw new Error(`Error resolving hApp domain. Found invalid environment key. __ENV.NETWORK: ${__ENV.NETWORK}`)
     }
 }
 

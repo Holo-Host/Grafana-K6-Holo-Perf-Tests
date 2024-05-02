@@ -27,15 +27,29 @@ export const setup = () => {
     if (! ((hAppId?.length ?? 0) > 0)) {
         throw new Error(`Setup failed: failed to resolve hApp ID for domain ${hAppDomain}`);
     }
-      
-    return { hAppId };
+
+    const currentIsoDate = new Date().toISOString();
+    const resolveHostsUrl = `${resolverUrl}/resolve/hosts?happ_id=${hAppId}&date=${currentIsoDate}&num=9999`;
+
+    const resolveHostsResult = http.get(resolveHostsUrl);
+    const hosts = resolveHostsResult?.json()?.hosts ?? null;
+    
+    if (domainTohAppResult.status !== 200) {
+      throw new Error(`Setup failed: resolver returned unexpected status ${resolveHostsResult.status} fetching hosts for hApp Id: ${hAppId}`);
+    }
+
+    if (! ((hosts?.length ?? 0) > 0)) {
+      throw new Error(`Setup failed: failed to resolve hosts for hAppID ${hAppId}`);
+    }    
+
+    return { hosts };
 }
 
 export default (data) => {
   
-    const { hAppId } = data;
+    const { hosts } = data;
 
-    check(hAppId, { 'hAppId is not empty': (hAppId) => hAppId.length > 0 });
-    console.log(`hAppId: ${hAppId}`);
+    check(hosts, { 'hosts is not empty': (hosts) => hosts.length > 0 });
+    console.log(`hosts: ${hosts.length}`);
     sleep(1);    
 }
