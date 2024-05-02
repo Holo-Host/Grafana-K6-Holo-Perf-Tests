@@ -5,7 +5,7 @@ const Network = {
     production: 'prod'
 }
 
-const resolverURL = () => {
+export const resolverURL = () => {
     switch (__ENV.NETWORK) {
       case Network.local:
         return `http://localhost:3000/`
@@ -24,7 +24,7 @@ const resolverURL = () => {
     }
 }
 
-const domain = () => {
+export const domain = () => {
     switch (__ENV.NETWORK) {
       case Network.local:
         return `cloud-console`
@@ -42,8 +42,3 @@ const domain = () => {
         throw new Error(`Error resolving hApp domain. Found invalid environment key. __ENV.NETWORK: ${__ENV.NETWORK}`)
     }
 }
-
-module.exports = {
-  resolverURL: resolverURL,
-  domain: domain
-};

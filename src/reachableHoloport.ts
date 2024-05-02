@@ -1,24 +1,24 @@
 import http from 'k6/http';
 import { sleep, check } from 'k6';
-// import { resolverURL, domain } from './k6Configuration';
-var k6Configuration = require('./k6Configuration.js');
+import { resolverURL, domain } from './k6Configuration.js';
+import { Options } from 'k6/options';
 
-export const options = {
+export const options: Options = {
     vus: 2,
     duration: '10s',
 }
 
 export const setup = () => {
-    const resolverUrl = k6Configuration.resolverURL();
-    const hAppDomain = k6Configuration.domain();
+    const resolverUrl = resolverURL(); // k6Configuration.resolverURL();
+    const hAppDomain = domain(); // k6Configuration.domain();
 
     console.log(`resolverUrl: ${resolverUrl}`);
     console.log(`hAppDomain: ${hAppDomain}`);
   
     const domainTohAppUrl = `${resolverUrl}/resolve/happId?url=${hAppDomain}&name=url&isPath=false`;
   
-    const domainTohAppResult = http.get(domainTohAppUrl);
-    const hAppId = domainTohAppResult?.json()?.happ_id ?? null;
+    const domainTohAppResult: any = http.get(domainTohAppUrl);
+    const hAppId: string | null = domainTohAppResult?.json()?.happ_id ?? null;
   
     if (domainTohAppResult.status !== 200) {
         throw new Error(`Setup failed: resolver returned unexpected status ${domainTohAppResult.status} for hApp domain ${hAppDomain}`);
@@ -31,8 +31,8 @@ export const setup = () => {
     const currentIsoDate = new Date().toISOString();
     const resolveHostsUrl = `${resolverUrl}/resolve/hosts?happ_id=${hAppId}&date=${currentIsoDate}&num=9999`;
 
-    const resolveHostsResult = http.get(resolveHostsUrl);
-    const hosts = resolveHostsResult?.json()?.hosts ?? null;
+    const resolveHostsResult: any = http.get(resolveHostsUrl);
+    const hosts: [] | null = resolveHostsResult?.json()?.hosts ?? null;
     
     if (domainTohAppResult.status !== 200) {
       throw new Error(`Setup failed: resolver returned unexpected status ${resolveHostsResult.status} fetching hosts for hApp Id: ${hAppId}`);
@@ -45,7 +45,7 @@ export const setup = () => {
     return { hosts };
 }
 
-export default (data) => {
+export default (data:any) => {
   
     const { hosts } = data;
 

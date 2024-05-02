@@ -9,8 +9,10 @@
     "build": "tsc"
   },
   "dependencies": {
+    "@types/k6": "^0.50.1"
   },
   "devDependencies": {
+    "@types/node": "^20.12.7",
     "typescript": "^5.4.5"
   }
 }
