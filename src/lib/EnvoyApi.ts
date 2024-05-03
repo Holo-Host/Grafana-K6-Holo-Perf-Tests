@@ -1,83 +1,25 @@
-export type HoloAppInfo = {
-  cell_info: {[role_name: string]: Array<CellInfo>},
-  status: HcAppStatus,
-  enable_errors: Array<any>,
-  agent_pub_key: string,
-  manifest: any
-}
 
-export type CellInfo = {
-  data: {
-    cell_id: any
-  }
-}
-
-export type HcAppStatus = {
-  type: 'running'
-} | {
-  type: 'paused' | 'running',
-  data: {
-    reason: any
-  }
-}
-
-export type HappConfig = {
-  name: string,
-  logo_url?: string,
-  publisher_name?: string,
-  registration_info_url?: string,
-  is_paused: boolean,
-}
-
-export type HoloAppStatus = {
-  type: 'not_installed'  
-} | {
-  type: 'installing'
-} | {
-  type: 'installed',
-  data: HoloAppInfo
-} | {
-  type: 'error_installing',
-  data: string
-} | {
-  type: 'not_hosted'
-} | {
-  type: 'paused'
-} | {
-  type: 'error_getting_app_info',
-  data: string
-} | {
-  type: 'error_enabling',
-  data: string
-}
-
-export type HostDetails = {
-  host_url: string
-  preference_hash: string
-  outdated_hash?: boolean
-}
-
-export async function raceResolved<T> (promises: Promise<T>[], rejectDelay: number): Promise<T> {
-  return Promise.race(promises.map(promise => promise.catch(async e => {
-    await wait(rejectDelay)
-    throw e
-  })))
-}
-
-export type HoloAppStatusType = "not_installed" | "installing" | "installed" | "error_installing" | "not_hosted" | "paused" | "error_getting_app_info" | "error_enabling"
-
-// const { EventEmitter } = require('events')
-import { EventEmitter } from './events.js'
-
-const WebSocket = require('./websocket.js')
+import {
+  type CellId,
+  type AppInfo,
+  type InstalledCell,
+  type CallZomeRequestUnsigned,
+  randomNonce,
+  getNonceExpiration,
+  hashZomeCall,
+  type AppCreateCloneCellRequest,
+  type CreateCloneCellResponse,
+  type EnableCloneCellResponse,
+  type DisableCloneCellResponse,
+  type AppEnableCloneCellRequest,
+  type AppDisableCloneCellRequest
+} from '@holochain/client'
+import type { HoloAppStatus, HoloAppStatusType, HostDetails, HappConfig } from './EnvoyTypes'
+import  { raceResolved, msgpackDecodeFromBlob, serializeAndHash, getHostIdFromUrl, holoEncodeDnaHash, wait } from './EnvoyTypes'
+import type Signer from './Signer'
+const { EventEmitter } = require('events')
+const WebSocket = require('isomorphic-ws')
 const msgpack = require('@msgpack/msgpack')
-const {
-  msgpackDecodeFromBlob,
-  serializeAndHash,
-  getHostIdFromUrl,
-  holoEncodeDnaHash,
-  wait,
-} = require('./utils')
 
 const BASE_RETRY_DELAY = 5_000
 const MAX_RETRIES = 7
@@ -89,15 +31,16 @@ export default class EnvoyApi extends EventEmitter {
   instance_count: number
   response_consumers: ResponseConsumers
   next_response_id: ResponseId
-  envoy_ws: WebSocket | undefined
+  // @ts-ignore
+  envoy_ws: WebSocket
   host: HostDetails
   host_id: string
   is_anonymous: boolean
   happ_id: string
-  signer: any
-  happ_config: Promise<HappConfig> | undefined
+  signer: Signer
+  // @ts-ignore
+  happ_config: Promise<HappConfig>
   retry_delay: number
-  heartbeat_interval: any
 
   constructor({
     host,
@@ -125,14 +68,15 @@ export default class EnvoyApi extends EventEmitter {
   }
 
   // TODO: consider refactoring constructor/initialize/connect into two functions 
-  async initialize () : Promise<EnvoyApi | null> { // returns itself
+  async initialize () : Promise<EnvoyApi> { // returns itself
     console.log(`Initializing EnvoyApi #(${this.instance_count})`)    
 
     if (this.retry_delay > MAX_RETRY_DELAY) {
       console.log(`EnvoyApi #(${this.instance_count}) reached max number of retries. Closing`)
       this.emit('error', new Error('Failed to connect'))
       this.close()
-      return null
+      // @ts-ignore
+      return
     }
 
     await wait(this.retry_delay)
@@ -155,7 +99,6 @@ export default class EnvoyApi extends EventEmitter {
       }
     }
 
-    // @ts-ignore
     this.envoy_ws.onclose = async () => {
       console.log(`EnvoyApi #(${this.instance_count}) - Websocket unexpectedly closing, attempting to restart in ${this.retry_delay/1000} seconds`)
 
@@ -164,7 +107,6 @@ export default class EnvoyApi extends EventEmitter {
       this.initialize()
     }
 
-    // @ts-ignore
     this.envoy_ws.onmessage = async message => {
       const decoded_message: EnvoyIncomingMessage =
         (await msgpackDecodeFromBlob(message.data)) as EnvoyIncomingMessage
@@ -203,8 +145,7 @@ export default class EnvoyApi extends EventEmitter {
     // and only works because happ_config never changes over the lifecycle of an EnvoyApi instance.
     // If either of these conditions change we should rethink this.
     this.happ_config = new Promise(resolve => {
-      // @ts-ignore
-      this.on('happ_config', happ_config => resolve(happ_config))
+      this.on('happ_config', (happ_config:any) => resolve(happ_config))
     })
 
     // keep alive heart beat
@@ -214,24 +155,20 @@ export default class EnvoyApi extends EventEmitter {
 
     return new Promise(resolve => {
       // wait til socket is open before adding error handler and returning
-      if( this.envoy_ws ) {
-        this.envoy_ws.onopen = () => {
-          this.emit('open')
+      this.envoy_ws.onopen = () => {
+        this.emit('open')
 
-          // @ts-ignore
-          this.envoy_ws.onerror = e => {
-            this.emit('error', e)
-          }        
+        this.envoy_ws.onerror = e => {
+          this.emit('error', e)
+        }        
 
-          resolve(this)
-        }
+        resolve(this)
       }
     })
   }
 
   static async connect(input: EnvoyApiInput): Promise<EnvoyApi> {
     const envoy_api = new EnvoyApi(input)
-    // @ts-ignore
     return envoy_api.initialize()
   }
 
@@ -253,6 +190,80 @@ export default class EnvoyApi extends EventEmitter {
   async enable_app() {
     console.log(`EnvoyApi #(${this.instance_count}) - Enabling app`)
     await this.sendRequest(enable_request())
+  }
+
+  async zome_call(zome_call_args: ZomeCallArgs) {
+    console.log(`EnvoyApi #(${this.instance_count}) - Making zome call`, zome_call_args)
+    const id = this.next_response_id++ as ResponseId
+
+    const request = await zome_call_request({
+      ...zome_call_args,
+      signer: this.signer,
+      hha_hash: this.happ_id,
+      id,
+      host_id: this.host_id,
+      hha_pricing_pref: this.host.preference_hash
+    })
+
+    this.sendRequest(request)
+
+    const body = await new Promise<ResponseBody>(resolve => {
+      this.response_consumers[id] = resolve
+    })
+
+    if (body.type === 'error') {
+      return body
+    } else {
+      return {
+        ...body,
+        data: msgpack.decode(body.data)
+      }
+    }
+  }
+
+  async create_clone_cell(
+    args: AppCreateCloneCellRequest
+  ): Promise<Result<CreateCloneCellResponse>> {
+    console.log(`EnvoyApi #(${this.instance_count}) - Making create clone call`, args)
+    const id = this.next_response_id++ as ResponseId
+
+    const request = await create_clone_cell_request(args, id)
+
+    this.sendRequest(request)
+
+    return new Promise<ResponseBody>(resolve => {
+      this.response_consumers[id] = resolve
+    })
+  }
+
+  async enable_clone_cell(
+    args: AppEnableCloneCellRequest
+  ): Promise<Result<EnableCloneCellResponse>> {
+    console.log(`EnvoyApi #(${this.instance_count}) - Making enable clone call`, args)
+    const id = this.next_response_id++ as ResponseId
+
+    const request = await enable_clone_cell_request(args, id)
+
+    this.sendRequest(request)
+
+    return new Promise<ResponseBody>(resolve => {
+      this.response_consumers[id] = resolve
+    })
+  }
+
+  async disable_clone_cell(
+    args: AppDisableCloneCellRequest
+  ): Promise<Result<DisableCloneCellResponse>> {
+    console.log(`EnvoyApi #(${this.instance_count}) - Making disable clone call`, args)
+    const id = this.next_response_id++ as ResponseId
+
+    const request = await disable_clone_cell_request(args, id)
+
+    this.sendRequest(request)
+
+    return new Promise<ResponseBody>(resolve => {
+      this.response_consumers[id] = resolve
+    })
   }
 
   async handleSigningRequest(signingRequest: SigningRequest) {
@@ -281,7 +292,7 @@ export default class EnvoyApi extends EventEmitter {
   }
 
   sendRequest(request: EnvoyOutgoingMessageSerialized) {
-      this.envoy_ws?.send(request)
+    this.envoy_ws.send(request)
   }
 
   // pings envoy for an app_status and returns a promise that resolves if the app_status matches expected_status, otherwise it either rejects or retries
@@ -321,10 +332,9 @@ export default class EnvoyApi extends EventEmitter {
   close () {
     console.log(`Closing EnvoyApi #(${this.instance_count})`)
     clearInterval(this.heartbeat_interval)
-    // @ts-ignore
     this.envoy_ws.onclose = null
     this.emit('close')
-    this.envoy_ws?.close()
+    this.envoy_ws.close()
     this.removeAllListeners()
   }
 }
@@ -340,11 +350,11 @@ export const getWorkingEnvoyApi = ({ expected_status, is_anonymous }: { expected
   happ_id,
 }: {
   host: HostDetails,
-  signer: any,
+  signer: Signer,
   happ_id: string,
 }): Promise<EnvoyApi> => {
 
-  let envoyApi: EnvoyApi | undefined = undefined
+  let envoyApi: EnvoyApi
 
   try {
     envoyApi = await EnvoyApi.connect({
@@ -357,8 +367,10 @@ export const getWorkingEnvoyApi = ({ expected_status, is_anonymous }: { expected
     // if we get here, the envoyApi is in a "working" state, in that it has returned the expected status status
     return envoyApi
   } catch (e) {
+    // @ts-ignore
     console.error(`EnvoyApi #(${envoyApi?.instance_count}) - error connecting in getWorkingEnvoyApi: `, e)
-    envoyApi?.close()
+    // @ts-ignore
+    envoyApi.close()
     throw e
   }
 }
@@ -374,7 +386,7 @@ export const getWorkingInstallableEnvoyApi = getWorkingEnvoyApi({ expected_statu
 
 type FindWorkingHoloportArgs = {
   hosts: HostDetails[]
-  signer: any
+  signer: Signer
   happ_id: string
 }
 
@@ -396,7 +408,7 @@ export async function findWorkingHoloport({
   }
 
   // add a timeout in case none of the above promises come back
-  let timeoutId: NodeJS.Timeout
+  let timeoutId: NodeJS.Timeout | null
 
   getWorkingAnonymousPromises.push(new Promise((_, reject) => {
     timeoutId = setTimeout(() => reject({ type: 'anonymous_no_working_hosts' }), 
@@ -416,7 +428,6 @@ export async function findWorkingHoloport({
 
     if (winner && timeoutId) { // stop the anonymous_no_working_hosts timeout firing if we have a winner
       clearTimeout(timeoutId)
-      // @ts-ignore
       timeoutId = null
     }
   }))
@@ -492,6 +503,148 @@ const signing_response_request = (signing_response: {
     data: signing_response
   })
 
+  
+const zome_call_request = async ({
+  zome_name,
+  fn_name,
+  payload,
+  role_name,
+  cell_id,
+  cap_secret,
+  signer,
+  hha_hash,
+  id,
+  host_id,
+  hha_pricing_pref
+}:any): Promise<EnvoyOutgoingMessageSerialized> => {
+  const args_hash = await serializeAndHash(payload)
+  // hha_hash is deserialized as an ActionHash and must be sent as bytes
+
+  // @ts-ignore
+  const { Codec, HHT } = await import('@holo-host/cryptolib')
+  const hha_hash_bytes = Codec.HoloHash.holoHashFromBuffer(
+    HHT.HEADER,
+    Codec.HoloHash.decode(hha_hash)
+  )
+
+  const pricing_pref = Codec.HoloHash.holoHashFromBuffer(
+    HHT.HEADER,
+    Codec.HoloHash.decode(hha_pricing_pref)
+  )
+  // The order of these fields matters. Changing it will cause a signature validation error.
+  const spec = {
+    call_spec: {
+      args_hash,
+      function: fn_name,
+      zome: zome_name,
+      role_name,
+      hha_hash: hha_hash_bytes
+    },
+    host_id,
+    timestamp: Date.now() * 1000,
+    hha_pricing_pref: pricing_pref
+  }
+
+  const spec_bytes = msgpack.encode(spec)
+  const spec_signature = await signer.sign(spec_bytes)
+
+  const signed_spec = {
+    spec,
+    signature: spec_signature
+  }
+  const encoded_payload = msgpack.encode(payload)
+
+  const provenance = Codec.HoloHash.holoHashFromBuffer(
+    HHT.AGENT,
+    signer.pubkey
+  )
+
+  const nonce = await randomNonce()
+  const expires_at = getNonceExpiration()
+  const unsigned_zome_call_payload: CallZomeRequestUnsigned = {
+    cap_secret: cap_secret || null,
+    cell_id,
+    zome_name,
+    fn_name,
+    provenance,
+    payload: encoded_payload,
+    nonce,
+    expires_at
+  }
+  const hashed_zome_call = await hashZomeCall(unsigned_zome_call_payload)
+// try {
+
+  const zome_call_signature = await signer.sign(hashed_zome_call)
+
+  const cell_dna_hash = holoEncodeDnaHash(cell_id[0])
+  // TODO: add a type for this
+  const request = {
+    type: 'request',
+    data: {
+      id,
+      body: {
+        type: 'zome_call',
+        data: {
+          signed_spec,
+          payload: encoded_payload,
+          cell_dna_hash,
+          cap_secret,
+          signature: zome_call_signature,
+          nonce,
+          expires_at
+        }
+      }
+    }
+  }
+
+  return msgpack.encode(request)
+}
+
+const create_clone_cell_request = (
+  args: AppCreateCloneCellRequest,
+  id: ResponseId
+): EnvoyOutgoingMessageSerialized =>
+  msgpack.encode({
+    type: 'request',
+    data: {
+      id,
+      body: {
+        type: 'create_clone_cell',
+        data: args
+      }
+    }
+  })
+
+const enable_clone_cell_request = (
+  args: AppEnableCloneCellRequest,
+  id: ResponseId
+): EnvoyOutgoingMessageSerialized =>
+  msgpack.encode({
+    type: 'request',
+    data: {
+      id,
+      body: {
+        type: 'enable_clone_cell',
+        data: args
+      }
+    }
+  })
+
+const disable_clone_cell_request = (
+  args: AppDisableCloneCellRequest,
+  id: ResponseId
+): EnvoyOutgoingMessageSerialized => {
+  return msgpack.encode({
+    type: 'request',
+    data: {
+      id,
+      body: {
+        type: 'disable_clone_cell',
+        data: args
+      }
+    }
+  })
+}
 
 const COMPATIBLE_ENVOY_VERSION = '0.2.x'
 
@@ -510,7 +663,7 @@ type ZomeCallArgs = {
   fn_name: string
   payload: any
   role_name: string
-  cell_id: any
+  cell_id: CellId
   cap_secret: any
 }
 
@@ -523,7 +676,7 @@ type AppStatus =
     }
   | {
       type: 'installed'
-      data: any
+      data: AppInfo
     }
   | {
       type: 'error_installing'
@@ -572,6 +725,9 @@ export type Result<T> =
 
 type ResponseBody = Result<
   | any
+  | CreateCloneCellResponse
+  | EnableCloneCellResponse
+  | DisableCloneCellResponse
 >
 
 type ResponseConsumers = {
@@ -588,7 +744,7 @@ type EnvoySignal = {
 // The signal we emit to web-sdk
 type HoloSignal = {
   data: any
-  cell: any
+  cell: InstalledCell
   zome_name: string
 }
 
@@ -627,7 +783,7 @@ type EnvoyIncomingMessage =
 
 type EnvoyApiInput = {
   host: HostDetails
-  signer: any
+  signer: Signer
   happ_id: string
   is_anonymous: boolean
 }

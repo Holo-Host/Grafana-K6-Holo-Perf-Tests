@@ -2,7 +2,8 @@ import http from 'k6/http';
 import { sleep, check } from 'k6';
 import { resolverURL, domain } from './k6Configuration';
 import { Options } from 'k6/options';
-// import EnvoyApi, { HostDetails } from './EnvoyApi.js'
+import EnvoyApi from './lib/EnvoyApi'
+import type { HostDetails } from './lib/EnvoyTypes'
 
 export const options: Options = {
     vus: 2,
@@ -57,34 +58,34 @@ export default async (data:any) => {
     sleep(1);    
 }
 
-// const checkHoloport = async (host_url: string, preference_hash: string): Promise<boolean> => {
+const checkHoloport = async (host_url: string, preference_hash: string): Promise<boolean> => {
 
-//     let envoyApi: EnvoyApi
+    let envoyApi: EnvoyApi
 
-//     let host: HostDetails = {
-//         host_url,
-//         preference_hash,
-//         outdated_hash: false
-//     }
+    let host: HostDetails = {
+        host_url,
+        preference_hash,
+        outdated_hash: false
+    }
 
-//     try {
-//       envoyApi = await EnvoyApi.connect({
-//         host,
-//         signer: undefined,
-//         happ_id: "",
-//         is_anonymous: true,
-//       })
-//       await envoyApi.expectStatusThen(['installed', 'not_installed'], () => {}, 'reject')
-//       // if we get here, the envoyApi is in a "working" state, in that it has returned the expected status status
-//       return true
-//     } catch (e) {
-//         // @ts-ignore
-//         console.error(`EnvoyApi #(${envoyApi?.instance_count}) - error connecting in getWorkingEnvoyApi: `, e)
-//         // @ts-ignore
-//         envoyApi.close()
-//       throw e
-//     }    
-// }
+    try {
+      envoyApi = await EnvoyApi.connect({
+        host,
+        signer: null as any,
+        happ_id: "",
+        is_anonymous: true,
+      })
+      await envoyApi.expectStatusThen(['installed', 'not_installed'], () => {}, 'reject')
+      // if we get here, the envoyApi is in a "working" state, in that it has returned the expected status status
+      return true
+    } catch (e) {
+        // @ts-ignore
+        console.error(`EnvoyApi #(${envoyApi?.instance_count}) - error connecting in getWorkingEnvoyApi: `, e)
+        // @ts-ignore
+        envoyApi.close()
+      throw e
+    }    
+}
 
 const teardown = (data:any) => {
 }
