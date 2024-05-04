@@ -1,12 +1,13 @@
 import http from 'k6/http';
-import { sleep, check } from 'k6';
+import { sleep, check  } from 'k6';
+import ws, { Params } from 'k6/ws';
 import { resolverURL, domain } from './k6Configuration';
 import { Options } from 'k6/options';
-import EnvoyApi from './lib/EnvoyApi'
-import type { HostDetails } from './lib/EnvoyTypes'
+export const wait = (ms:any) => new Promise(resolve => setTimeout(resolve, ms))
+const msgpack = require('@msgpack/msgpack')
 
 export const options: Options = {
-    vus: 2,
+    vus: 1,
     duration: '10s',
 }
 
@@ -53,39 +54,60 @@ export default async (data:any) => {
 
     check(hosts, { 'hosts is not empty': (hosts) => hosts.length > 0 });
 
-    // await checkHoloport(hosts[0].host_url, hosts[0].preference_hash);
+    let hostCount = 0;
+    hosts.forEach(async (host:any) => {
+      console.log(`🚓 checking host: ${++hostCount}`);
+      await checkHoloport(host.host_url, host.preference_hash, hostCount);  
+    });
+
+    // await checkHoloport(hosts[0].host_url, hosts[0].preference_hash);  
+    
     console.log(`hosts: ${hosts.length}`);
     sleep(1);    
 }
 
-const checkHoloport = async (host_url: string, preference_hash: string): Promise<boolean> => {
+const app_status_request = (): any =>
+  msgpack.encode({
+    type: 'app_status',
+    data: null
+  })
 
-    let envoyApi: EnvoyApi
+const version_request = (): any =>
+  msgpack.encode({
+    type: 'version',
+    data: null
+  })  
 
-    let host: HostDetails = {
-        host_url,
-        preference_hash,
-        outdated_hash: false
-    }
+const checkHoloport = async (host_url: string, preference_hash: string, hostCount: number): Promise<boolean | Error> => {
+  return new Promise((resolve, reject) => {
+    const params: Params = {};
+    const scheme = true ? 'wss' : 'ws'
+    const ws_url = `${scheme}://${host_url}/hosting/?host_preference_hash=${preference_hash}&anonymous`
 
-    try {
-      envoyApi = await EnvoyApi.connect({
-        host,
-        signer: null as any,
-        happ_id: "",
-        is_anonymous: true,
+    const res = ws.connect(ws_url, params, (socket) => {
+      socket.on('open', function open() {
+        console.log(`connected to host ${hostCount}`);
+        socket.send(version_request());
+        wait(4000)
+        socket.close();
       })
-      await envoyApi.expectStatusThen(['installed', 'not_installed'], () => {}, 'reject')
-      // if we get here, the envoyApi is in a "working" state, in that it has returned the expected status status
-      return true
-    } catch (e) {
-        // @ts-ignore
-        console.error(`EnvoyApi #(${envoyApi?.instance_count}) - error connecting in getWorkingEnvoyApi: `, e)
-        // @ts-ignore
-        envoyApi.close()
-      throw e
-    }    
-}
+  
+      socket.on('message', async (message:any) => {
+        console.log(`☎ Message received from host ${hostCount}: message: ${message}`);
+        socket.close();
+      });    
+  
+      socket.on('close', () => {
+        console.log(`disconnected from ${hostCount}`);
+        resolve(true);
+      })
 
-const teardown = (data:any) => {
+      socket.on('error', (e:any) => {
+        console.log(`error on host ${hostCount}`, e);
+        reject(e);
+      })
+    });    
+
+    check(res, { 'Connected successfully': (r) => r && r.status === 101 });
+  });
 }
