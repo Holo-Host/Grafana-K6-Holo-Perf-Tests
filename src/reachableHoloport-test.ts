@@ -3,8 +3,19 @@ import { sleep, check  } from 'k6';
 import ws, { Params } from 'k6/ws';
 import { resolverURL, domain } from './k6Configuration';
 import { Options } from 'k6/options';
-export const wait = (ms:any) => new Promise(resolve => setTimeout(resolve, ms))
+
 const msgpack = require('@msgpack/msgpack')
+
+export const wait = (ms: number): Promise<void> => {
+  return new Promise(resolve => {
+      const date = Date.now();
+      let currentDate = null;
+      do {
+          currentDate = Date.now();
+      } while (currentDate - date < ms);
+      resolve();
+  });
+}
 
 export const options: Options = {
     vus: 1,
@@ -54,13 +65,17 @@ export default async (data:any) => {
 
     check(hosts, { 'hosts is not empty': (hosts) => hosts.length > 0 });
 
-    let hostCount = 0;
-    hosts.forEach(async (host:any) => {
-      console.log(`🚓 checking host: ${++hostCount}`);
-      await checkHoloport(host.host_url, host.preference_hash, hostCount);  
-    });
+    // let hostCount = 0;
+    // hosts.forEach(async (host:any) => {
+    //   console.log(`🚓 checking host: ${++hostCount}`);
+    //   await checkHoloport(host.host_url, host.preference_hash, hostCount);  
+    // });
 
     // await checkHoloport(hosts[0].host_url, hosts[0].preference_hash);  
+    // ws://localhost:9999/hosting/?host_preference_hash=uhCkk6DzfLR-9NE1O4e7uv4eGYGo2iSMc3PSGOp7OBqg_zvf6BGK7&agent=uhCAkGy3Evf-AwkD72V4xVZ43PHFRyOJhmwlKCtnGHbAF8Q-1OBKt&happ=uhCkkCQHxC8aG3v3qwD_5Velo1IHE1RdxEr9-tuNSK15u73m1LPOo&anonymous
+    const local_hostUrl = 'localhost:9999';
+    const local_host_preference_hash = 'uhCkk6DzfLR-9NE1O4e7uv4eGYGo2iSMc3PSGOp7OBqg_zvf6BGK7';
+    checkHoloport(local_hostUrl, local_host_preference_hash, 1);
     
     console.log(`hosts: ${hosts.length}`);
     sleep(1);    
@@ -81,16 +96,46 @@ const version_request = (): any =>
 const checkHoloport = async (host_url: string, preference_hash: string, hostCount: number): Promise<boolean | Error> => {
   return new Promise((resolve, reject) => {
     const params: Params = {};
-    const scheme = true ? 'wss' : 'ws'
-    const ws_url = `${scheme}://${host_url}/hosting/?host_preference_hash=${preference_hash}&anonymous`
+    const scheme = host_url.includes("localhost") ? 'ws' : 'wss'
+    const ws_url = `${scheme}://${host_url}/hosting/?host_preference_hash=${preference_hash}&agent=uhCAkGy3Evf-AwkD72V4xVZ43PHFRyOJhmwlKCtnGHbAF8Q-1OBKt&happ=uhCkkCQHxC8aG3v3qwD_5Velo1IHE1RdxEr9-tuNSK15u73m1LPOo&anonymous`
 
     const res = ws.connect(ws_url, params, (socket) => {
       socket.on('open', function open() {
         console.log(`connected to host ${hostCount}`);
-        socket.send(version_request());
+        socket.ping();
+        const appStatusRequest = app_status_request()
+        console.log(`host ${hostCount} send app_status_request type of appStatusRequest: ${typeof appStatusRequest}`, appStatusRequest);
+        try {
+          var bd:any = new ArrayBuffer(Object.keys(appStatusRequest).length);
+          for (var key in appStatusRequest) {
+              const index = parseInt(key);
+              bd[index] = appStatusRequest[key];
+          }        
+          console.log(`host ${hostCount} ArrayBuffer`, bd);
+          // const binaryData = Buffer.from([130, 164, 116, 121, 112, 101, 170, 97, 112, 112, 95, 115, 116, 97, 116, 117, 115, 164, 100, 97, 116, 97, 192]);
+          // const binaryData = Buffer.from(bd);
+          socket.sendBinary(bd);
+        } catch (e) {
+          console.log(`host ${hostCount} error converting appStatusRequest to binary`, e);
+        }
+
+
+        try {
+          const binaryData = Buffer.from([130, 164, 116, 121, 112, 101, 170, 97, 112, 112, 95, 115, 116, 97, 116, 117, 115, 164, 100, 97, 116, 97, 192]);
+          
+        } catch (e) {
+          console.log(`host ${hostCount} error sending binary app_status_request`, e);
+        }
+
+        // socket.send(appStatusRequest);
+
         wait(4000)
         socket.close();
       })
+
+      socket.on('ping', () => console.log('PING!'));
+
+      socket.on('pong', () => console.log('PONG!'));
   
       socket.on('message', async (message:any) => {
         console.log(`☎ Message received from host ${hostCount}: message: ${message}`);
