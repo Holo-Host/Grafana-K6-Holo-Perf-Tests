@@ -11,10 +11,10 @@ export const resolverURL = () => {
         return `http://localhost:3000/`
   
       case Network.development:
-        return `https://resolver.dev.holotest.net`
+        return `https://devnet-resolver-api.holo.host`
   
       case Network.qa:
-        return `https://resolver.qa.holotest.net`
+        return `https://resolver-api.qa.holotest.net`
   
       case Network.production:
         return `resolver.holo.host`
@@ -42,3 +42,7 @@ export const domain = () => {
         throw new Error(`Error resolving hApp domain. Found invalid environment key. __ENV.NETWORK: ${__ENV.NETWORK}`)
     }
 }
+
+// - API_TOKEN giving access to [devnet / QA resolver API](https://github.com/Holo-Host/devnet-resolver-api)
+// in cloudflare `api-secrets` store with key `devnet_resolver_kv_token`
+export const API_TOKEN = "cLU351BwlLtaJBU9POWsNYUJJDvZW7cFnOracf58fYQ==";
