@@ -8,7 +8,8 @@ const Network = {
 export const resolverURL = () => {
     switch (__ENV.NETWORK) {
       case Network.local:
-        return `http://localhost:3000/`
+        // return `http://localhost:3000/`
+        return `https://resolver-api.qa.holotest.net`
   
       case Network.development:
         return `https://devnet-resolver-api.holo.host`
@@ -27,7 +28,8 @@ export const resolverURL = () => {
 export const domain = () => {
     switch (__ENV.NETWORK) {
       case Network.local:
-        return `cloud-console`
+        //return `cloud-console`
+        return `cloud-console.qa.holotest.net`
   
       case Network.development:
         return `cloud-console.dev.holotest.net`
@@ -41,6 +43,25 @@ export const domain = () => {
       default:
         throw new Error(`Error resolving hApp domain. Found invalid environment key. __ENV.NETWORK: ${__ENV.NETWORK}`)
     }
+}
+
+export const hbsURL = () => {
+  switch (__ENV.NETWORK) {
+    case Network.local:
+      return `http://localhost:3000`
+
+    case Network.development:
+      return `https://hbs.dev.holotest.net`
+
+    case Network.qa:
+      return `https://hbs.qa.holotest.net`
+
+    case Network.production:
+      return `hbs.holo.host`
+
+    default:
+      throw new Error(`Error resolving HBS url. Found invalid environment key. __ENV.NETWORK: ${__ENV.NETWORK}`)
+  }
 }
 
 // - API_TOKEN giving access to [devnet / QA resolver API](https://github.com/Holo-Host/devnet-resolver-api)
