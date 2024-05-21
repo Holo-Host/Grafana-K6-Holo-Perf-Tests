@@ -28,7 +28,7 @@ export const checkHolochainOnHoloport = async (hostUrl:string, preferenceHash: s
       },
     };
 
-    const hbsUptimeHoloportStatusUrl = `${hbsUrl}/uptime/holoport-status`; 
+    const hbsUptimeHoloportStatusUrl = `${hbsUrl}/ops/api/v1/holoport-status`; 
     const holoportStatusResult: any = await hbsPostRequest(hbsUptimeHoloportStatusUrl, payload, params);
 
     if (holoportStatusResult.status !== 200) {

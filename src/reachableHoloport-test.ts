@@ -21,7 +21,7 @@ export const wait = (ms: number): Promise<void> => {
 
 export const options: Options = {
     vus: 1,
-    duration: '120s',
+    duration: '300s',
 }
 
 export const setup = async () => {
@@ -41,12 +41,10 @@ export default async (data:any) => {
   
     const { hosts, hAppId } = data;
 
-    check(hosts, { 'hosts is not empty': (hosts) => hosts.length > 0 });
+    check(hosts, { 'Found hosts in environment': (hosts) => hosts.length > 0 });
 
-    let hostCount = 0;
     hosts.forEach(async (host:any) => {
       const holoportStatus = await checkHolochainOnHoloport(host.host_url, host.preference_hash, hAppId);
-      console.log(`🚓 Host: ${++hostCount}: ${holoportStatus}`);
       check(holoportStatus, { 'holoport is reachable and holochain is running': (holoportStatus) => holoportStatus === true });
     });
 
