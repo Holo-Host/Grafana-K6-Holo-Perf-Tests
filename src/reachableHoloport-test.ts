@@ -45,7 +45,9 @@ export default async (data:any) => {
 
     hosts.forEach(async (host:any) => {
       const holoportStatus = await checkHolochainOnHoloport(host.host_url, host.preference_hash, hAppId);
-      check(holoportStatus, { 'holoport is reachable and holochain is running': (holoportStatus) => holoportStatus === true });
+      check(holoportStatus,
+        { [`${host.host_url} is reachable and holochain is running`] : (holoportStatus) => holoportStatus === true },
+        { holoport: `${host.host_url}` });
     });
 
 }
