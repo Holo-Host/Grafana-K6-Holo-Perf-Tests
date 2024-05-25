@@ -63,7 +63,3 @@ export const hbsURL = () => {
       throw new Error(`Error resolving HBS url. Found invalid environment key. __ENV.NETWORK: ${__ENV.NETWORK}`)
   }
 }
-
-// - API_TOKEN giving access to [devnet / QA resolver API](https://github.com/Holo-Host/devnet-resolver-api)
-// in cloudflare `api-secrets` store with key `devnet_resolver_kv_token`
-export const API_TOKEN = "cLU351BwlLtaJBU9POWsNYUJJDvZW7cFnOracf58fYQ==";

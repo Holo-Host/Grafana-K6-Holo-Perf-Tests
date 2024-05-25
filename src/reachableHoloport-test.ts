@@ -1,8 +1,6 @@
-import { sleep, check  } from 'k6';
-import ws, { Params } from 'k6/ws';
-import { WebSocket } from 'k6/experimental/websockets';
+import { check  } from 'k6';
 import { resolveHappIdFromDomain, resolveHostUrlsFromHappId } from './resolverUtil';
-import { checkHolochainOnHoloport } from './hbsUtil';
+import { checkHolochainOnHoloport, fetchServiceAuthToken } from './hbsUtil';
 import type { DomainHosts } from './resolverUtil';
 import { Options } from 'k6/options';
 
@@ -34,17 +32,18 @@ export const setup = async () => {
 
     console.log(`Found ${hosts.length} hosts for hApp ID ${hAppId}`);
 
-    return { hosts, hAppId };
+    const serviceAuthToken = await fetchServiceAuthToken()
+
+    return { hosts, hAppId, serviceAuthToken };
 }
 
 export default async (data:any) => {
   
-    const { hosts, hAppId } = data;
+    const { hosts, hAppId, serviceAuthToken } = data;
 
     check(hosts, { 'Found hosts in environment': (hosts) => hosts.length > 0 });
-
     hosts.forEach(async (host:any) => {
-      const holoportStatus = await checkHolochainOnHoloport(host.host_url, host.preference_hash, hAppId);
+      const holoportStatus = await checkHolochainOnHoloport(host.host_url, host.preference_hash, hAppId, serviceAuthToken);
       check(holoportStatus,
         { [`${host.host_url} is reachable and holochain is running`] : (holoportStatus) => holoportStatus === true },
         { holoport: `${host.host_url}` });

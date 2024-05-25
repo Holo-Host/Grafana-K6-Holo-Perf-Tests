@@ -4,13 +4,14 @@
   "repository": "ssh://git@github.com/k6io/example-typescript.git",
   "author": "Simon Aronsson <simme@k6.io>",
   "engines": {
-    "node": "16 || 18 || 20"
+    "node": "16 || 18 || 20 || 21"
   },
   "license": "MIT",
   "scripts": {
-    "test-qa": "npm run bundle && k6 run -e NETWORK=qa ./dist/reachableHoloport-test.js",
-    "test-dev": "npm run bundle && k6 run -e NETWORK=dev ./dist/reachableHoloport-test.js",
-    "test-local": "npm run bundle && k6 run -e NETWORK=local ./dist/reachableHoloport-test.js",
+    "k6": "npm run bundle && k6 run -e NETWORK=$NETWORK -e ID=$ID -e SECRET=$SECRET -e RESOLVER_API_TOKEN=$RESOLVER_API_TOKEN ./dist/reachableHoloport-test.js",
+    "test-local": "dotenv -e .env -- npm run k6",
+    "test-dev": "dotenv -e .env-dev -- npm run k6",
+    "test-qa": "dotenv -e .env-qa -- npm run k6",
     "bundle": "webpack"
   },
   "devDependencies": {
@@ -31,6 +32,8 @@
     "clean-webpack-plugin": "4.0.0",
     "copy-webpack-plugin": "^12.0.2",
     "crypto-browserify": "^3.12.0",
+    "dotenv": "^16.4.5",
+    "dotenv-cli": "^7.4.2",
     "isomorphic-ws": "^4.0.1",
     "json-stable-stringify": "^1.0.1",
     "semver": "^7.5.1",

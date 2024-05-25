@@ -1,4 +1,4 @@
-import { resolverURL, domain, API_TOKEN } from './k6Configuration';
+import { resolverURL, domain } from './k6Configuration';
 import http from 'k6/http';
 
 type DomainHost = {
@@ -10,6 +10,7 @@ export type DomainHosts = {
     hosts: DomainHost[];
 };
 
+const API_TOKEN = __ENV.RESOLVER_API_TOKEN
 
 const resolverPostRequest = async (url: string, payload: string, params: any):Promise<any> => {
     return http.post(url, payload, params);
