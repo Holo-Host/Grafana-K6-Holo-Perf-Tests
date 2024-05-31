@@ -48,13 +48,13 @@ export const domain = () => {
 export const hbsURL = () => {
   switch (__ENV.NETWORK) {
     case Network.local:
-      return `http://localhost:3000`
+      return `https://hbs.dev.holotest.net`
 
     case Network.development:
       return `https://hbs.dev.holotest.net`
 
     case Network.qa:
-      return `https://hbs.qa.holotest.net`
+      return `https://hbs.dev.holotest.net`
 
     case Network.production:
       return `hbs.holo.host`
