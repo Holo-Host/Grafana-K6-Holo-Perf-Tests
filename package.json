@@ -9,7 +9,9 @@
   "license": "MIT",
   "scripts": {
     "k6": "npm run bundle && k6 run -e NETWORK=$NETWORK -e ID=$ID -e SECRET=$SECRET -e RESOLVER_API_TOKEN=$RESOLVER_API_TOKEN ./dist/reachableHoloport-test.js",
+    "k6-cloud": "npm run bundle && k6 cloud -e NETWORK=$NETWORK -e ID=$ID -e SECRET=$SECRET -e RESOLVER_API_TOKEN=$RESOLVER_API_TOKEN ./dist/reachableHoloport-test.js",
     "test-local": "dotenv -e .env -- npm run k6",
+    "test-local-cloud": "dotenv -e .env -- npm run k6-cloud",
     "test-dev": "dotenv -e .env-dev -- npm run k6",
     "test-qa": "dotenv -e .env-qa -- npm run k6",
     "bundle": "webpack"

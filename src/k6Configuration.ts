@@ -1,8 +1,29 @@
+import { Options } from 'k6/options';
+
 const Network = {
     local: 'local',
     development: 'dev',
     qa: 'qa',
     production: 'prod'
+}
+
+export const options: Options = {
+  ext: {
+    loadimpact: {
+        distribution: {
+            'amazon:us:ashburn': { loadZone: 'amazon:us:ashburn', percent: 20 },
+            'amazon:ie:dublin': { loadZone: 'amazon:ie:dublin', percent: 20 },
+            'amazon:de:frankfurt': { loadZone: 'amazon:de:frankfurt', percent: 20 },
+            'amazon:au:sydney': { loadZone: 'amazon:au:sydney', percent: 20 },
+            'amazon:jp:tokyo': { loadZone: 'amazon:jp:tokyo', percent: 20 },
+        },
+    },
+  },
+  thresholds: {
+    http_req_duration: ['p(75)<3000'], // 75% of requests must complete below 3sec
+  },  
+  vus: 2,
+  duration: '600s',
 }
 
 export const resolverURL = () => {

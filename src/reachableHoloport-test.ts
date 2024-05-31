@@ -1,8 +1,8 @@
 import { check  } from 'k6';
 import { resolveHappIdFromDomain, resolveHostUrlsFromHappId } from './resolverUtil';
 import { checkHolochainOnHoloport, fetchServiceAuthToken } from './hbsUtil';
+import { options } from './k6Configuration';
 import type { DomainHosts } from './resolverUtil';
-import { Options } from 'k6/options';
 
 const msgpack = require('@msgpack/msgpack')
 
@@ -15,11 +15,6 @@ export const wait = (ms: number): Promise<void> => {
       } while (currentDate - date < ms);
       resolve();
   });
-}
-
-export const options: Options = {
-    vus: 1,
-    duration: '300s',
 }
 
 export const setup = async () => {
