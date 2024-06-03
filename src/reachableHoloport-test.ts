@@ -37,12 +37,27 @@ export default async (data:any) => {
     const { hosts, hAppId, serviceAuthToken } = data;
 
     check(hosts, { 'Found hosts in environment': (hosts) => hosts.length > 0 });
-    hosts.forEach(async (host:any) => {
-      const holoportStatus = await checkHolochainOnHoloport(host.host_url, host.preference_hash, hAppId, serviceAuthToken);
-      check(holoportStatus,
-        { [`${host.host_url} is reachable and holochain is running`] : (holoportStatus) => holoportStatus === true },
-        { holoport: `${host.host_url}` });
+
+    checkAllHosts(hosts, hAppId, serviceAuthToken);
+}
+
+async function checkAllHosts(hosts: any[], hAppId: string, serviceAuthToken: string) {
+    const promises = hosts.map(async (host: any) => {
+        const holoportStatus = await checkHolochainOnHoloport(host.host_url, host.preference_hash, hAppId, serviceAuthToken);
+        return { host, holoportStatus };
     });
 
+    const results = await Promise.all(promises);
+
+    results.forEach(({ host, holoportStatus }) => {
+        check(
+        holoportStatus,
+        { [`${host.host_url} is reachable and holochain is running`]: (holoportStatus) => holoportStatus === true },
+        { holoport: `${host.host_url}` }
+        );
+    });
 }
+  
+  
+  
 

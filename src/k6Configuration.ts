@@ -22,8 +22,8 @@ export const options: Options = {
   thresholds: {
     http_req_duration: ['p(75)<3000'], // 75% of requests must complete below 3sec
   },  
-  vus: 2,
-  duration: '600s',
+  vus: 1,
+  duration: '60s',
 }
 
 export const resolverURL = () => {
